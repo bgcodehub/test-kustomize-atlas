@@ -76,7 +76,7 @@ spec:
             configMapKeyRef:
               key: ENV_NAME
               name: env-region-cm
-        image: application-image-placeholder:latest
+        image: ""
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
