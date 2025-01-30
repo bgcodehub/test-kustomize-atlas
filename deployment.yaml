@@ -76,7 +76,7 @@ spec:
             configMapKeyRef:
               key: ENV_NAME
               name: env-region-cm
-        image: ""
+        image: trial22aca5.jfrog.io/docker-local/my-app:8965300fee2f2880f4fa3ee590b38a89f3502507
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
