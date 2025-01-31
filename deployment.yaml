@@ -12,14 +12,8 @@ metadata:
 ---
 apiVersion: v1
 data:
-  aws-configmap.yaml: |
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: aws-config
-    data:
-      AWS_REGION: "us-east-1"
-      ENV_NAME: "dev"
+  AWS_REGION: us-east-1
+  ENV_NAME: dev
 kind: ConfigMap
 metadata:
   annotations:
@@ -27,7 +21,7 @@ metadata:
   labels:
     app: go-api
     owner: cfa
-  name: aws-config-k5gt647hf5
+  name: aws-config-k59hf62k99
 ---
 apiVersion: v1
 kind: Service
@@ -89,13 +83,13 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: AWS_REGION
-              name: aws-config-k5gt647hf5
+              name: aws-config-k59hf62k99
         - name: ENV_NAME
           valueFrom:
             configMapKeyRef:
               key: ENV_NAME
-              name: aws-config-k5gt647hf5
-        image: trial22aca5.jfrog.io/docker-local/my-app:fb6542c052e2003c98676d37e789081a8d5fdc2a
+              name: aws-config-k59hf62k99
+        image: trial22aca5.jfrog.io/docker-local/my-app:9f2c36fb586d0d0478147568da66257508ed7c11
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
