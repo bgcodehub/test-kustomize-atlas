@@ -18,19 +18,15 @@ jobs:
 
       - name: Extract and Validate Payload
         run: |
-          # Debugging payload to verify structure
           echo "Received Payload:"
           echo '${{ toJson(github.event) }}'
 
-          # Extract repository path and tag from the payload
           REPO_PATH="${{ github.event.client_payload.repository.name }}"
           NEW_TAG="${{ github.event.client_payload.tag }}"
           FILE_PATH="deployment.yaml"
 
-          # Extract image name from the repository path
           IMAGE_NAME=$(echo "$REPO_PATH" | cut -d'/' -f1)
 
-          # Ensure this workflow runs only for 'my-app'
           if [[ "$IMAGE_NAME" != "my-app" ]]; then
             echo "Skipping update. Image '${IMAGE_NAME}' is not 'my-app'."
             exit 0
@@ -38,34 +34,35 @@ jobs:
 
           echo "Updating deployment for 'my-app' with tag: $NEW_TAG"
 
-          # Update the image tag in deployment.yaml using yq
           yq -y -i '.spec.template.spec.containers[0].image = "'"${IMAGE_NAME}:${NEW_TAG}"'"' $FILE_PATH
+
+      - name: Configure Git for Unsigned Commits
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global commit.gpgsign false
+          git config --global gpg.program ""
 
       - name: Commit and Push Changes
         env:
           GITHUB_TOKEN: ${{ secrets.ATLAS_GITHUB_PAT }}
         run: |
-          set -e  # Exit on error
+          set -e
 
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-          # Authenticated repository URL using PAT
-          REPO_URL="https://github.com/${{ github.repository }}.git"
-          AUTH_REPO_URL="https://x-access-token:${GITHUB_TOKEN}@${REPO_URL#https://}"
+          # Use PAT for authentication
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
 
-          # Add, commit, and push changes
-          echo "📥 Checking for changes..."
           git add deployment.yaml
 
-          # Check if there are changes to commit
           if git diff --cached --quiet; then
             echo "✅ No changes detected. Skipping commit."
             exit 0
           fi
 
-          echo "✅ Changes detected. Committing..."
           git commit -m "feat: update my-app image to $NEW_TAG"
 
           echo "🚀 Pushing changes to the main branch..."
-          git push "$AUTH_REPO_URL" HEAD:main
+          git push "$REPO_URL" HEAD:main
