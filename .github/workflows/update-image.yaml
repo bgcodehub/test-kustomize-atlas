@@ -23,8 +23,8 @@ jobs:
           echo '${{ toJson(github.event) }}'
 
           # Extract repository name and tag from the payload
-          IMAGE_NAME="${{ github.event.repository.name }}"
-          NEW_TAG="${{ github.event.tag }}"
+          IMAGE_NAME="${{ github.event.client_payload.repository.name }}"
+          NEW_TAG="${{ github.event.client_payload.tag }}"
           FILE_PATH="deployment.yaml"
 
           # Ensure this workflow runs only for 'my-app'
