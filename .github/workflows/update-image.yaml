@@ -39,11 +39,7 @@ jobs:
           echo "Updating deployment for 'my-app' with tag: $NEW_TAG"
 
           # Update the image tag in deployment.yaml using yq
-          yq -i '
-            .spec.template.spec.containers[] |=
-            select(.image | contains("'"${IMAGE_NAME}"'")) |
-            .image = "'"${IMAGE_NAME}:${NEW_TAG}"'"
-          ' $FILE_PATH
+          yq -y -i '.spec.template.spec.containers[0].image = "'"${IMAGE_NAME}:${NEW_TAG}"'"' $FILE_PATH
 
       - name: Commit and Push Changes
         if: success()  # Only runs if 'my-app' was detected
