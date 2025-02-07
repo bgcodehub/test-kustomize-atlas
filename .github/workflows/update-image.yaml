@@ -1,0 +1,36 @@
+name: Update K8s Image
+
+on:
+  repository_dispatch:
+    types: [update-image]
+
+jobs:
+  update-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install yq
+        run: |
+          sudo apt-get update && sudo apt-get install -y yq
+
+      - name: Update Image Tag in deployment.yaml
+        run: |
+          IMAGE_NAME="${{ github.event.client_payload.image_name }}"
+          NEW_TAG="${{ github.event.client_payload.new_tag }}"
+          FILE_PATH="deployment.yaml"
+
+          # Update the image tag in deployment.yaml
+          yq e -i '.spec.template.spec.containers[] |=
+            select(.image | test("'"${IMAGE_NAME}"'")) |
+            .image = "'"${IMAGE_NAME}:${NEW_TAG}"'"' $FILE_PATH
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add deployment.yaml
+          git commit -m "Update image to $NEW_TAG"
+          git push
