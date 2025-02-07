@@ -22,10 +22,14 @@ jobs:
           echo "Received Payload:"
           echo '${{ toJson(github.event) }}'
 
-          # Extract repository name and tag from the payload
-          IMAGE_NAME="${{ github.event.client_payload.repository.name }}"
+          # Extract repository path and tag from the payload
+          REPO_PATH="${{ github.event.client_payload.repository.name }}"
+          REPO_KEY="${{ github.event.client_payload.repository.repo_key }}"
           NEW_TAG="${{ github.event.client_payload.tag }}"
           FILE_PATH="deployment.yaml"
+
+          # Extract image name from the repository path
+          IMAGE_NAME=$(basename "$REPO_PATH")
 
           # Ensure this workflow runs only for 'my-app'
           if [[ "$IMAGE_NAME" != "my-app" ]]; then
