@@ -18,6 +18,7 @@ jobs:
 
       - name: Extract and Validate Payload
         run: |
+          # Debugging payload to verify structure
           echo "Received Payload:"
           echo '${{ toJson(github.event) }}'
 
@@ -26,7 +27,7 @@ jobs:
           NEW_TAG="${{ github.event.client_payload.tag }}"
           FILE_PATH="deployment.yaml"
 
-          # Extract the image name from the repository path
+          # Extract image name from the repository path
           IMAGE_NAME=$(echo "$REPO_PATH" | cut -d'/' -f1)
 
           # Ensure this workflow runs only for 'my-app'
@@ -37,25 +38,34 @@ jobs:
 
           echo "Updating deployment for 'my-app' with tag: $NEW_TAG"
 
-          # Update the image tag in deployment.yaml
-          yq -y -i '.spec.template.spec.containers[] |=
-            select(.image | test("'"${IMAGE_NAME}"'")) |
-            .image = "'"${IMAGE_NAME}:${NEW_TAG}"'"' $FILE_PATH
+          # Update the image tag in deployment.yaml using yq
+          yq -y -i '.spec.template.spec.containers[0].image = "'"${IMAGE_NAME}:${NEW_TAG}"'"' $FILE_PATH
 
       - name: Commit and Push Changes
         env:
           GITHUB_TOKEN: ${{ secrets.ATLAS_GITHUB_PAT }}
         run: |
-          set -e
+          set -e  # Exit on error
 
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-          # Authenticated repository URL
+          # Authenticated repository URL using PAT
           REPO_URL="https://github.com/${{ github.repository }}.git"
           AUTH_REPO_URL="https://x-access-token:${GITHUB_TOKEN}@${REPO_URL#https://}"
 
-          # Commit and push changes
+          # Add, commit, and push changes
+          echo "📥 Checking for changes..."
           git add deployment.yaml
-          git commit -m "Update my-app image to $NEW_TAG"
+
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "✅ No changes detected. Skipping commit."
+            exit 0
+          fi
+
+          echo "✅ Changes detected. Committing..."
+          git commit -m "feat: update my-app image to $NEW_TAG"
+
+          echo "🚀 Pushing changes to the main branch..."
           git push "$AUTH_REPO_URL" HEAD:main
