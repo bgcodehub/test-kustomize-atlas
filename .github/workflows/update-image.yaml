@@ -24,12 +24,11 @@ jobs:
 
           # Extract repository path and tag from the payload
           REPO_PATH="${{ github.event.client_payload.repository.name }}"
-          REPO_KEY="${{ github.event.client_payload.repository.repo_key }}"
           NEW_TAG="${{ github.event.client_payload.tag }}"
           FILE_PATH="deployment.yaml"
 
-          # Extract image name from the repository path
-          IMAGE_NAME=$(basename "$REPO_PATH")
+          # Extract image name from the repository path (extracts 'my-app' from 'my-app/v1.0.7/manifest.json')
+          IMAGE_NAME=$(echo "$REPO_PATH" | cut -d'/' -f1)
 
           # Ensure this workflow runs only for 'my-app'
           if [[ "$IMAGE_NAME" != "my-app" ]]; then
