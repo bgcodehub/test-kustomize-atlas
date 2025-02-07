@@ -1,24 +1,191 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    cfa-base-name: go-api
+    cfa-base-version: v0.1.0
+  labels:
+    app: go-api
+    owner: cfa
+  name: sa
+  namespace: default
+---
+apiVersion: v1
+data:
+  AWS_REGION: us-east-1
+  ENV_NAME: dev
+kind: ConfigMap
+metadata:
+  annotations:
+    cfa-base-name: go-api
+  labels:
+    app: go-api
+    owner: cfa
+  name: aws-config-k59hf62k99
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    cfa-base-name: go-api
+    cfa-base-version: v0.1.0
+  labels:
+    app: go-api
+    owner: cfa
+  name: service
+  namespace: default
+spec:
+  ports:
+  - name: app-port
+    port: 80
+    protocol: TCP
+    targetPort: app-port
+  selector:
+    app: go-api
+    owner: cfa
+  type: NodePort
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo-app
-  namespace: demo-app
   annotations:
-    argocd-image-updater.argoproj.io/image-list: "trial22aca5.jfrog.io/docker-local/demo-app"
-    argocd-image-updater.argoproj.io/demo-app.update-strategy: "latest"
-    argocd-image-updater.argoproj.io/write-back-method: "git:secret"
+    cfa-base-name: go-api
+    cfa-base-version: v0.1.0
+  labels:
+    app: go-api
+    owner: cfa
+    tier: application
+  name: deployment
+  namespace: default
 spec:
-  replicas: 1
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
-      app: demo-app
+      app: go-api
+      owner: cfa
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
+      annotations:
+        cfa-base-name: go-api
+        cfa-base-version: v0.1.0
+        prometheus.io/scrape: "true"
       labels:
-        app: demo-app
+        app: go-api
+        owner: cfa
     spec:
       containers:
-        - name: demo-container
-          image: trial22aca5.jfrog.io/docker-local/demo-app:latest
-          ports:
-            - containerPort: 8080
+      - env:
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_REGION
+              name: aws-config-k59hf62k99
+        - name: ENV_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: ENV_NAME
+              name: aws-config-k59hf62k99
+        image: trial22aca5.jfrog.io/docker-local/my-app:9f2c36fb586d0d0478147568da66257508ed7c11
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+        name: application-container
+        ports:
+        - containerPort: 8080
+          name: app-port
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: 2300m
+            memory: 1Gi
+          requests:
+            cpu: 1300m
+            memory: 612Mi
+      imagePullSecrets:
+      - name: artifactory-docker
+      serviceAccountName: sa
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  annotations:
+    cfa-base-name: go-api
+    cfa-base-version: v0.1.0
+  labels:
+    app: go-api
+    owner: cfa
+  name: pdb
+  namespace: default
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: go-api
+      owner: cfa
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  annotations:
+    cfa-base-name: go-api
+    cfa-base-version: v0.1.0
+  labels:
+    app: go-api
+    owner: cfa
+  name: hpa
+  namespace: default
+spec:
+  maxReplicas: 10
+  metrics:
+  - resource:
+      name: cpu
+      targetAverageUtilization: 80
+    type: Resource
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: deployment
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  annotations:
+    cfa-base-name: go-api
+    cfa-base-version: v0.1.0
+  labels:
+    app: go-api
+    owner: cfa
+    prometheus-enabled: "true"
+    release: prometheus-operator
+  name: servicemonitor
+  namespace: default
+spec:
+  endpoints:
+  - interval: 30s
+    path: /prometheus
+    port: app-port
+    scheme: http
+  namespaceSelector:
+    matchNames:
+    - default
+  selector:
+    matchLabels:
+      app: go-api
+      owner: cfa
